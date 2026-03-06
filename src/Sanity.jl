@@ -58,3 +58,12 @@ function distance_snr(model::Sanity)
     fun(d, e) = var(d) / mean(e) # Var(δ) / mean(ϵ²)
     map(fun, eachrow(model.delta), eachrow(model.var_delta))
 end
+
+report_genestats(model::Sanity) = DataFrame(
+    sanity_log_activity_mean = model.mu,
+    sanity_log_activity_mean_sd = model.var_mu,
+    sanity_activity_sd = gene_variance(model),
+    sanity_normalized_entropy = gene_entropy(model),
+    sanity_signal_noise_ratio = distance_snr(model),
+    sanity_distance_basis = distance_snr(model) .>= 1
+)
