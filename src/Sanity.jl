@@ -64,6 +64,6 @@ report_genestats(model::Sanity) = DataFrame(
     sanity_log_activity_mean_sd = model.var_mu,
     sanity_activity_sd = gene_variance(model),
     sanity_normalized_entropy = gene_entropy(model),
-    sanity_signal_noise_ratio = distance_snr(model),
+    sanity_distance_snr = distance_snr(model),
     sanity_distance_basis = distance_snr(model) .>= 1
 )
