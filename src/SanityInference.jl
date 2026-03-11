@@ -1,29 +1,25 @@
 function fit_gene(model::Sanity, g::Integer, tmp::Sanity_tmparrays)
-    x, c = eachrow(model.counts)[g], model.log_cell_sizes
+    x, c = model.counts[g, :], model.log_cell_sizes
     n, C, x2 = sum(x), length(x), vvmapreduce(abs2, +, x)
     q, L = tmp.q, eachrow(model.likelihood)[g]
     delta, var_d = tmp.delta_bin, tmp.var_d_bin
     @tasks for i in 1:length(L)
-        @local y, F = (Vector{Float64}(undef, C) for _ in 1:2)
-        v, d = model.prior_var[i], eachcol(delta)[i]
-        vna = v * (n+1)
-        @. y = v * x + c + log(vna)
-        q[i] = find_zero(q -> sum(womega.(y .- q)) - vna, model.q0, Order16())
-        @. F = womega(y - q[i]) # F = f * vna where sum(f) = 1
-        @. d = v * x - F # d = log(F) - log(vna) - c + q; F + log(F) = y - q
-        mdlr = vna - sum(@. abs2(F) / (F + 1)) # Matrix Determinant Lemma * vna
-        ldet = vvmapreduce(log1p, +, F) # -C*log(v) cancels out first term in L
-        L[i] = (x2 * v - vvmapreduce(abs2, +, F) / v - log(mdlr / vna) - ldet) / 2 - (n+1) * q[i]
-        for j in 1:length(x)
-            w = v / (F[j] + 1) # identical to the initial upper bound in jmbreda
-            if x[j] != 0
-                var_d[j, i] = w * (1 + abs2(F[j]) / (F[j] + 1) / mdlr)
-                continue
-            end
-            dL(e) = (e + 2F[j] * (exp(sqrt(e)) - sqrt(e) - 1)) / v - 1
-            var_d[j, i] = try find_zero(dL, w / 4, Order16()) catch
-                              find_zero(dL, (0, w), A42()) end
-        end
+        @local F = Vector{Float64}(undef, C)
+        v, d, e = model.prior_var[i], eachcol(delta)[i], eachcol(var_d)[i]
+        vna = v * (n + 1)
+        @. d = v * x       # cache v * x
+        @. F = d + c + log(vna) # temporary for fitfrac
+        fitfrac(q) = sum(womega.(F .- q)) - vna
+        q[i] = find_zero(fitfrac, model.q0, Order16())
+        @. F = womega(F - q[i]) # satisfies constraint, sum(F) = vna
+        @. d -= F          # d = v * x - F
+        @. e = inv(F + 1)  # cache 1/(F+1)
+        @. F = abs2(F)     # cache F^2
+        F2 = sum(F)        # cache sum(F^2)
+        @. F *= e          # cache F^2/(F+1)
+        mdl = vna - sum(F) # Matrix Determinant Lemma factor * vna
+        L[i] = (x2 * v - F2 / v - log(mdl/v) + vvmapreduce(log, +, e)) / 2 - (n+1) * q[i]
+        @. e *= v * (1 + F / mdl) # error squared, not adjusting for null counts
     end
     L .= exp.(L .- maximum(L))
     L .= L ./ sum(L)
