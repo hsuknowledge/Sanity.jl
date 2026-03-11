@@ -1,10 +1,21 @@
 using StatsBase
-using Roots: find_zero, Order16, A42
+using Roots: find_zero, Order16
 using ReLambertW: womega # Wright omega: womega(x) = lambertw0(exp(x))
 using SpecialFunctions: digamma, trigamma
 using OhMyThreads: @tasks
 using VectorizedReduction: vvmapreduce, vmapreducethen
 using LinearAlgebra: mul!
+
+struct Sanity_tmparrays
+    q::Vector{Float64}
+    delta_bin::Matrix{Float64}
+    var_d_bin::Matrix{Float64}
+end
+Sanity_tmparrays(C::Integer, B::Integer) = Sanity_tmparrays(
+    Vector{Float64}(undef, B),
+    Matrix{Float64}(undef, C, B),
+    Matrix{Float64}(undef, C, B)
+)
 
 struct Sanity{T<:AbstractMatrix{Float64}}
     counts::T # G x C
@@ -16,17 +27,8 @@ struct Sanity{T<:AbstractMatrix{Float64}}
     var_mu::Vector{Float64}
     delta::Matrix{Float64}      # G x C
     var_delta::Matrix{Float64}  # G x C
+    tmp::Sanity_tmparrays
 end
-
-struct Sanity_tmparrays
-    q::Vector{Float64}
-    delta_bin::Matrix{Float64}
-    var_d_bin::Matrix{Float64}
-end
-Sanity_tmparrays(C::Integer, B::Integer) = Sanity_tmparrays(
-    Vector{Float64}(undef, B),
-    Matrix{Float64}(undef, C, B),
-    Matrix{Float64}(undef, C, B))
 
 include("SanityInference.jl")
 include("SanityDistance.jl")
@@ -37,19 +39,19 @@ function Sanity(counts::T where T<:AbstractMatrix{Float64};
     c = vec(log.(sum(counts; dims = 1)))
     q = log(sum(counts)) # log(total) as initial guess for q at any given v
     v = @. vmin * exp(log(vmax / vmin) / (B-1) * (0:B-1))
-    m = Sanity(counts, c, q, v, zeros(G, B),
-               zeros(G), zeros(G), zeros(G, C), zeros(G, C))
-    run || return m
     tmp = Sanity_tmparrays(C, B)
+    m = Sanity(counts, c, q, v, zeros(G, B), zeros(G), zeros(G),
+               zeros(G, C), zeros(G, C), tmp)
+    run || return m
     @time for g in 1:G
-        fit_gene(m, g, tmp)
+        fit_gene(m, g)
     end
     m
 end
 
 gene_variance(model::Sanity) = model.likelihood * model.prior_var
 logcounts(model::Sanity) = model.mu .+ model.delta
-logcounts_sd(model::Sanity) = model.var_mu .+ model.var_delta
+logcounts_var(model::Sanity) = model.var_mu + model.var_delta
 function gene_entropy(model::Sanity)
     fun(p) = entropy(p, length(p))
     map(fun, eachrow(model.likelihood))

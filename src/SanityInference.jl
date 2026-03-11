@@ -1,8 +1,8 @@
-function fit_gene(model::Sanity, g::Integer, tmp::Sanity_tmparrays)
+function fit_gene(model::Sanity, g::Integer)
     x, c = model.counts[g, :], model.log_cell_sizes
     n, C, x2 = sum(x), length(x), vvmapreduce(abs2, +, x)
-    q, L = tmp.q, eachrow(model.likelihood)[g]
-    delta, var_d = tmp.delta_bin, tmp.var_d_bin
+    q, L = model.tmp.q, eachrow(model.likelihood)[g]
+    delta, var_d = model.tmp.delta_bin, model.tmp.var_d_bin
     @tasks for i in 1:length(L)
         @local F = Vector{Float64}(undef, C)
         v, d, e = model.prior_var[i], eachcol(delta)[i], eachcol(var_d)[i]
