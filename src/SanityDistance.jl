@@ -1,8 +1,8 @@
 function cell_distance!(model::Sanity, dist::Matrix;
                         B = 40, genes = missing, cells = missing)
-    C = size(model.counts)[2]
+    G, C = size(model.counts)
     @assert size(dist) == (C, C) "Shape of `dist` should be C x C."
-    g = ismissing(genes) ? findall(distance_snr(model) .>= 1) : genes
+    g = ismissing(genes) ? findall(distance_snr(model) .>= 1) : (1:G)[genes]
     @info "Calculate distance using " * string(length(g)) * " genes."
     vg = gene_variance(model)[g]
     c = ismissing(cells) ? (1:C) : (1:C)[cells]
