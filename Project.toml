@@ -1,6 +1,8 @@
 [deps]
 Arrow = "69666777-d1a9-59fb-9406-91d4454c9d45"
+Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
 OhMyThreads = "67456a42-1dca-4109-a031-0a68de7e3ad5"
 ReLambertW = "8f5a32f4-3b74-42d7-ab78-165b0add7fed"
 Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
