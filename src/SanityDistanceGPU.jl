@@ -6,6 +6,7 @@ using KernelAbstractions
 @kernel cpu=false inbounds=true function celldistance_256bins!(
         @Const(pairs), @Const(del), @Const(eta), @Const(vg), @Const(alpha), dist_out
     )
+    log2e = reinterpret(Float32, 0x3fb8aa3b)
     p, a = @index(Global, NTuple) # pair & alpha indices
     ltmp = @localmem Float32 128
     dtmp = @localmem Float32 128
@@ -33,14 +34,14 @@ using KernelAbstractions
         @fastmath p2_2 = inv(alpha[2a] * vg[g2] + e2_2)
         @fastmath p2_3 = inv(alpha[2a] * vg[g3] + e2_3)
         @fastmath p2_4 = inv(alpha[2a] * vg[g4] + e2_4)
-        @fastmath acc_ll1 += x2_1 * p1_1 - log(p1_1)
-        @fastmath acc_ll1 += x2_2 * p1_2 - log(p1_2)
-        @fastmath acc_ll1 += x2_3 * p1_3 - log(p1_3)
-        @fastmath acc_ll1 += x2_4 * p1_4 - log(p1_4)
-        @fastmath acc_ll2 += x2_1 * p2_1 - log(p2_1)
-        @fastmath acc_ll2 += x2_2 * p2_2 - log(p2_2)
-        @fastmath acc_ll2 += x2_3 * p2_3 - log(p2_3)
-        @fastmath acc_ll2 += x2_4 * p2_4 - log(p2_4)
+        @fastmath acc_ll1 += x2_1 * p1_1 * log2e - log2(p1_1)
+        @fastmath acc_ll1 += x2_2 * p1_2 * log2e - log2(p1_2)
+        @fastmath acc_ll1 += x2_3 * p1_3 * log2e - log2(p1_3)
+        @fastmath acc_ll1 += x2_4 * p1_4 * log2e - log2(p1_4)
+        @fastmath acc_ll2 += x2_1 * p2_1 * log2e - log2(p2_1)
+        @fastmath acc_ll2 += x2_2 * p2_2 * log2e - log2(p2_2)
+        @fastmath acc_ll2 += x2_3 * p2_3 * log2e - log2(p2_3)
+        @fastmath acc_ll2 += x2_4 * p2_4 * log2e - log2(p2_4)
         s1_1 = alpha[2a-1] * vg[g1] * p1_1
         s1_2 = alpha[2a-1] * vg[g2] * p1_2
         s1_3 = alpha[2a-1] * vg[g3] * p1_3
@@ -63,8 +64,8 @@ using KernelAbstractions
         e2 = eta[g, i1] + eta[g, i2]
         @fastmath p1 = inv(alpha[2a-1] * vg[g] + e2)
         @fastmath p2 = inv(alpha[2a] * vg[g] + e2)
-        @fastmath acc_ll1 += x2 * p1 - log(p1)
-        @fastmath acc_ll2 += x2 * p2 - log(p2)
+        @fastmath acc_ll1 += x2 * p1 * log2e - log2(p1)
+        @fastmath acc_ll2 += x2 * p2 * log2e - log2(p2)
         s1 = alpha[2a-1] * vg[g] * p1
         s2 = alpha[2a] * vg[g] * p2
         @fastmath acc_dd1 += (x2 * s1 + e2) * s1
@@ -99,8 +100,8 @@ using KernelAbstractions
     end
     @synchronize()
     lmax = mymax(ltmp[1], ltmp[2])
-    acc_ll1 = exp(acc_ll1 - lmax)
-    acc_ll2 = exp(acc_ll2 - lmax)
+    acc_ll1 = 2^(acc_ll1 - lmax)
+    acc_ll2 = 2^(acc_ll2 - lmax)
     ltmp[a] = acc_ll1 + acc_ll2
     dtmp[a] = acc_ll1 * acc_dd1 + acc_ll2 * acc_dd2
     @synchronize()
