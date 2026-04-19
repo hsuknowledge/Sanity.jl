@@ -169,4 +169,15 @@ function cell_distance!(dist_out, del_gpu, eta_gpu, vg_gpu; batchsize = 10000)
         ## end GPU region
         dist_out[idx[1:lastsize]] .= dist_tmp_cpu[1:lastsize]
     end
+    idx = findall(.!(isfinite.(dist_out))) # reevaluate any nan or inf result
+    np = length(idx)
+    if np > 0
+        pairs = [x[1] << 32 | x[1] for x in idx]
+        resize!(dist_gpu, np)
+        resize!(dist_tmp_cpu, np)
+        copyto!(pairs_gpu, pairs)
+        k1!(pairs_gpu, del_gpu, eta_gpu, vg_gpu, alpha_gpu, dist_gpu; ndrange = (np, 128))
+        copyto!(dist_tmp_cpu, dist_gpu)
+        dist_out[idx] .= dist_tmp_cpu
+    end
 end
