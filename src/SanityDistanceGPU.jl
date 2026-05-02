@@ -1,4 +1,4 @@
-using Base.Cartesian: @nexprs
+using Base.Cartesian: @nexprs, @ncall
 using Combinatorics
 using KernelAbstractions
 
@@ -34,11 +34,11 @@ end
             p2_j = inv(av2_j + e2_j)
             @kbn_sum!(acc_ll1, x2_j * p1_j, cll1)
             @kbn_sum!(acc_ll2, x2_j * p2_j, cll2)
-            acc_dd1 += (x2_j * p1_j * av1_j + e2_j) * av1_j * p1_j
-            acc_dd2 += (x2_j * p2_j * av2_j + e2_j) * av2_j * p2_j
+            @fastmath acc_dd1 += (x2_j * p1_j * av1_j + e2_j) * av1_j * p1_j
+            @fastmath acc_dd2 += (x2_j * p2_j * av2_j + e2_j) * av2_j * p2_j
         end
-        @kbn_sum!(acc_ll1, -log(p1_1 * p1_2 * p1_3 * p1_4), cll1)
-        @kbn_sum!(acc_ll2, -log(p2_1 * p2_2 * p2_3 * p2_4), cll2)
+        @kbn_sum!(acc_ll1, -log(@ncall(4, *, p1)), cll1)
+        @kbn_sum!(acc_ll2, -log(@ncall(4, *, p2)), cll2)
     end
     for g in (fld(ng, 4)*4+1):ng
         x2 = abs2(del[g, i1] - del[g, i2])
@@ -48,8 +48,8 @@ end
         p2 = inv(av2 + e2)
         @kbn_sum!(acc_ll1, x2 * p1, cll1)
         @kbn_sum!(acc_ll2, x2 * p2, cll2)
-        acc_dd1 += (x2 * p1 * av1 + e2) * av1 * p1
-        acc_dd2 += (x2 * p2 * av2 + e2) * av2 * p2
+        @fastmath acc_dd1 += (x2 * p1 * av1 + e2) * av1 * p1
+        @fastmath acc_dd2 += (x2 * p2 * av2 + e2) * av2 * p2
         @kbn_sum!(acc_ll1, -log(p1), cll1)
         @kbn_sum!(acc_ll2, -log(p2), cll2)
     end
@@ -59,18 +59,16 @@ end
     @synchronize()
     if a % 8 == 1
         m1 = max(ltmp[a], ltmp[a + 1])
-        m2 = max(ltmp[a + 2], ltmp[a + 3])
-        m3 = max(ltmp[a + 4], ltmp[a + 5])
-        m4 = max(ltmp[a + 6], ltmp[a + 7])
-        ltmp[a] = max(m1, m2, m3, m4)
+        m2 = max(ltmp[a + 2], ltmp[a + 3], ltmp[a + 4])
+        m3 = max(ltmp[a + 5], ltmp[a + 6], ltmp[a + 7])
+        ltmp[a] = max(m1, m2, m3)
     end
     @synchronize()
     if a % 64 == 1
         m1 = max(ltmp[a], ltmp[a + 8])
-        m2 = max(ltmp[a + 16], ltmp[a + 24])
-        m3 = max(ltmp[a + 32], ltmp[a + 40])
-        m4 = max(ltmp[a + 48], ltmp[a + 56])
-        ltmp[a] = max(m1, m2, m3, m4)
+        m2 = max(ltmp[a + 16], ltmp[a + 24], ltmp[a + 32])
+        m3 = max(ltmp[a + 40], ltmp[a + 48], ltmp[a + 56])
+        ltmp[a] = max(m1, m2, m3)
     end
     @synchronize()
     lmax = max(ltmp[1], ltmp[65])
