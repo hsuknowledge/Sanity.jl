@@ -23,9 +23,9 @@ end
     @private acc_dd1 = 0f0
     @private acc_dd2 = 0f0
     cll1 = cll2 = 0f0
-    for g in 1:fld(ng, 4)
-        @nexprs 4 j->begin
-            g_j = 4g - 4 + j
+    for g in 1:fld(ng, 8)
+        @nexprs 8 j->begin
+            g_j = 8g - 8 + j
             x2_j = abs2(del[g_j, i1] - del[g_j, i2])
             e2_j = eta[g_j, i1] + eta[g_j, i2]
             av1_j = alpha[2a-1] * vg[g_j]
@@ -38,9 +38,11 @@ end
             @fastmath acc_dd2 += (x2_j * p2_j * av2_j + e2_j) * av2_j * p2_j
         end
         @kbn_sum!(acc_ll1, -log(@ncall(4, *, p1)), cll1)
+        @kbn_sum!(acc_ll1, -log(@ncall(4, *, i -> p1_{i+4})), cll1)
         @kbn_sum!(acc_ll2, -log(@ncall(4, *, p2)), cll2)
+        @kbn_sum!(acc_ll2, -log(@ncall(4, *, i -> p2_{i+4})), cll2)
     end
-    for g in (fld(ng, 4)*4+1):ng
+    for g in (fld(ng, 8)*8+1):ng
         x2 = abs2(del[g, i1] - del[g, i2])
         e2 = eta[g, i1] + eta[g, i2]
         av1, av2 = alpha[2a-1] * vg[g], alpha[2a] * vg[g]
